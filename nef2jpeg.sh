@@ -1,8 +1,28 @@
 #!/bin/bash
-jpegfolder="jpeg_onbewerkt"
+# parse params
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        -t|--temp) tmpfolder="$2"; shift ;;
+        -p|--photos) photofolder="$2"; shift ;;
+        -j|--jpeg) jpegfolder="$2"; shift ;;
+        *) echo "Unknown parameter passed: $1"; exit 1 ;;
+    esac
+    shift
+done
+
+# verify params and set defaults
+if [ -z "$tmpfolder" ]; then tmpfolder="/tmp/"; fi;
+if [ -z "$photofolder" ]; then photofolder="~/"; fi;
+if [ -z "$jpegfolder" ]; then jpegfolder="jpeg_unedited"; fi;
+
+echo "tmpfolder: $tmpfolder"
+echo "photofolder: $photofolder"
+echo "jpegfolder: $jpegfolder"
+
+exit 1
 
 IFS=$'\n'
-rawfiles=($(find $1 -type f -name "*NEF"))
+rawfiles=($(find "$photofolder" -type f -name "*NEF"))
 
 for rawfile in "${rawfiles[@]}"
     do
