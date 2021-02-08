@@ -16,7 +16,7 @@ The script is designed to be used in a periodic cron job on a Synology NAS.
 : Specify the path to scan for NEF files. Subfolders will be scanned recursively. Default: homefolder (~/)
 
 `-t path` or `--temp path`
-: Specify the path of a folder to use for temporary files. Default: /tmp
+: Specify the path of a folder to use for temporary files (without tailing /). Default: /tmp
 
 `-j string` or `--jpeg string`
 : A name for the folder where the JPEG files are stored. The folder is created on the same level the NEF file is found. Default: jpeg_unedited
