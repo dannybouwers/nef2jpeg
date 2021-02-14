@@ -1,8 +1,10 @@
 #!/bin/bash
 #standard tool parameters
-#imagick=(-resize 1920x1920 -colorspace LAB -channel 0 -auto-level +channel -colorspace sRGB)
-imagick=(-auto-level -auto-gamma -normalize -resize 1920x1920)
-dcraw=(-q 3 -o 1 -6 -g 2.4 12.92 -w -T) # https://www.image-engineering.de/library/technotes/720-have-a-look-at-the-details-the-open-source-raw-converter-dcraw
+#imagick=(-resize 1920x1920 -colorspace HSL -channel B -auto-level +channel -colorspace sRGB)
+#imagick=(-auto-level -auto-gamma -normalize -resize 1920x1920)
+imagick=(-resize 1920x1920)
+redist=(-m HSL 60,80,40) #http://www.fmwconcepts.com/imagemagick/redist/index.php
+dcraw=(-q 3 -o 1 -6 -g 2.4 12.92 -w) # https://www.image-engineering.de/library/technotes/720-have-a-look-at-the-details-the-open-source-raw-converter-dcraw
 
 
 # parse params
@@ -30,6 +32,8 @@ logcreated=0
 
 #starttime
 starttime=`date +%s`
+
+cd "`dirname "$0"`"
 
 IFS=$'\n'
 rawfiles=($(find "$photofolder" -type f -name "*NEF"))
@@ -70,7 +74,8 @@ for rawfile in "${rawfiles[@]}"
         tmpfile=$( echo -n "${jpegfile}" | openssl md5 )
         
         # Convert RAW to JPEG
-        dcraw ${dcraw[@]} -c "${rawfile}" | convert - ${imagick[@]} "${tmpfolder}/${tmpfile}.jpg"
+        #dcraw ${dcraw[@]} -c "${rawfile}" | convert - ${imagick[@]} "${tmpfolder}/${tmpfile}.jpg"
+        dcraw ${dcraw[@]} -c "${rawfile}" | convert - ${imagick[@]} MIFF:- | ./redist.sh ${redist[@]} MIFF:- "${tmpfolder}/${tmpfile}.jpg"
         
         if [ $? -gt 0 ] ; then
             echo "Could not convert file ${rawfile}" >&2
