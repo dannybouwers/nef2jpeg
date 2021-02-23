@@ -3,7 +3,7 @@
 #imagick=(-resize 1920x1920 -colorspace HSL -channel B -auto-level +channel -colorspace sRGB)
 #imagick=(-auto-level -auto-gamma -normalize -resize 1920x1920)
 imagick=(-resize 1920x1920)
-redist=(-m HSL 60,80,40) #http://www.fmwconcepts.com/imagemagick/redist/index.php
+redist=(-m HSL 60,90,30) #http://www.fmwconcepts.com/imagemagick/redist/index.php
 dcraw=(-q 3 -o 1 -6 -g 2.4 12.92 -w) # https://www.image-engineering.de/library/technotes/720-have-a-look-at-the-details-the-open-source-raw-converter-dcraw
 
 
@@ -120,11 +120,11 @@ echo "Processed RAW files: ${logfiles}"
 echo "Folders created: ${logdirs}"
 echo "Files created: ${logcreated}"
 echo "Files Skipped: ${logskipped}"
-echo "Errors: ${logerrors}"
 echo "Runtime: $runhours:$runminutes:$runseconds (hh:mm:ss)"
 
 #exit
 if [ $logerrors -gt 0 ] ; then
+    echo "Errors: ${logerrors}"
     exit 1
 else 
     exit 0

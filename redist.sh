@@ -487,6 +487,7 @@ else
 	# get infile and outfile
 	infile="$1"
 	outfile="$2"
+	dir=`dirname $outfile`
 	#
 	# if nothing supplied for mean,lo,hi then set to defaults
 	[ "$mean" = "" ] && mean=$dmean
