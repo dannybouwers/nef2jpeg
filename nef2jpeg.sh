@@ -3,7 +3,7 @@
 #imagick=(-resize 1920x1920 -colorspace HSL -channel B -auto-level +channel -colorspace sRGB)
 #imagick=(-auto-level -auto-gamma -normalize -resize 1920x1920)
 imagick=(-resize 1920x1920)
-redist=(-m HSL 60,90,30) #http://www.fmwconcepts.com/imagemagick/redist/index.php
+redist=(-m RGB 60,80,50) #http://www.fmwconcepts.com/imagemagick/redist/index.php
 dcraw=(-q 3 -o 1 -6 -g 2.4 12.92 -w) # https://www.image-engineering.de/library/technotes/720-have-a-look-at-the-details-the-open-source-raw-converter-dcraw
 
 
@@ -71,7 +71,8 @@ for rawfile in "${rawfiles[@]}"
 	then
 		((logskipped+=1))
 	else
-        tmpfile=$( echo -n "${jpegfile}" | openssl md5 )
+        tmpfile=`echo -n "${jpegfile}" | md5sum | head -c 20`
+        #tmpfile=$convertedfilename
         
         # Convert RAW to JPEG
         #dcraw ${dcraw[@]} -c "${rawfile}" | convert - ${imagick[@]} "${tmpfolder}/${tmpfile}.jpg"
@@ -91,14 +92,15 @@ for rawfile in "${rawfiles[@]}"
         fi
 
         #move file from temp
-        mv "${tmpfolder}/${tmpfile}.jpg" "${jpegfile}"
+        cp --no-preserve=mode,ownership "${tmpfolder}/${tmpfile}.jpg" "${jpegfile}" && rm "${tmpfolder}/${tmpfile}.jpg"
 
         if [ $? -gt 0 ] ; then
             echo "Could not move ${jpegfile}" >&2
             ((logerrors+=1))
+        else
+            ((logcreated+=1))
         fi
 
-        ((logcreated+=1))
     fi
 
     ((logfiles+=1))
