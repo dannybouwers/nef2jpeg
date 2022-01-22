@@ -3,7 +3,7 @@
 #imagick=(-resize 1920x1920 -colorspace HSL -channel B -auto-level +channel -colorspace sRGB)
 #imagick=(-auto-level -auto-gamma -normalize -resize 1920x1920)
 imagick=(-resize 1920x1920)
-redist=(-m RGB 60,80,50) #http://www.fmwconcepts.com/imagemagick/redist/index.php
+redist=(-m GLOBAL 60,80,40) #http://www.fmwconcepts.com/imagemagick/redist/index.php
 dcraw=(-q 3 -o 1 -6 -g 2.4 12.92 -w) # https://www.image-engineering.de/library/technotes/720-have-a-look-at-the-details-the-open-source-raw-converter-dcraw
 
 die() {
@@ -28,7 +28,7 @@ done
 
 # check dependencies
 command -v exiftool >/dev/null 2>&1 || die "exiftool not available"
-command -v dcraw_emu >/dev/null 2>&1 || die "dcraw not available"
+command -v /usr/lib/libraw/dcraw_emu >/dev/null 2>&1 || die "libraw-bin not available"
 command -v convert >/dev/null 2>&1 || die "convert not available"
 command -v bc >/dev/null 2>&1 || die "bc not available"
 
@@ -83,21 +83,32 @@ for rawfile in "${rawfiles[@]}"
 	else
         (
             set -e
-            tmpfile=`echo -n "${jpegfile}" | md5sum | head -c 20`
+            # tmpfile=`echo -n "${jpegfile}" | md5sum | head -c 20`
             #tmpfile=$convertedfilename
+            tmpfile="${tmpfolder}/${rawfilename}"
             
             # Convert RAW to JPEG
             #dcraw ${dcraw[@]} -c "${rawfile}" | convert - ${imagick[@]} "${tmpfolder}/${tmpfile}.jpg"
-            dcraw ${dcraw[@]} -c "${rawfile}" | convert - ${imagick[@]} MIFF:- | ./redist.sh ${redist[@]} MIFF:- "${tmpfolder}/${tmpfile}.jpg" \
-                || die "Could not convert file ${rawfile}"
+            # dcraw ${dcraw[@]} -c "${rawfile}" | convert - ${imagick[@]} MIFF:- | ./redist.sh ${redist[@]} MIFF:- "${tmpfolder}/${tmpfile}.jpg" \
+            cp "${rawfile}" "${tmpfile}"
+
+            /usr/lib/libraw/dcraw_emu ${dcraw[@]} "${tmpfile}" \
+                || die "Could not convert file ${rawfilename} to PPM"
+
+            convert "${tmpfile}.ppm" ${imagick[@]} MIFF:- | ./redist.sh ${redist[@]} MIFF:- "${tmpfile}.jpg" \
+                || die "Could not convert file ${rawfilename}.ppm to JPG"
 
             # Copy Exif to JPG
-            exiftool -quiet -overwrite_original -TagsFromFile "${rawfile}" --Orientation "${tmpfolder}/${tmpfile}.jpg" \
-                || die "Could not copy EXIF of ${rawfile}"
+            exiftool -quiet -overwrite_original -TagsFromFile "${tmpfile}" --Orientation "${tmpfile}.jpg" \
+                || die "Could not copy EXIF from ${rawfilename}"
 
             #move file from temp
-            cp --no-preserve=mode,ownership "${tmpfolder}/${tmpfile}.jpg" "${jpegfile}" && rm "${tmpfolder}/${tmpfile}.jpg" \
+            cp --no-preserve=mode,ownership "${tmpfile}.jpg" "${jpegfile}"  \
                 || die "Could not create ${jpegfile}"
+
+            #clean up
+            rm "${tmpfile}" "${tmpfile}.ppm" "${tmpfile}.jpg" \
+                || die "Could not cleanup ${tmpfolder}/"
         )
         if [ $? -gt 0 ]
         then
