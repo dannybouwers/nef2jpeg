@@ -6,6 +6,14 @@ imagick=(-resize 1920x1920)
 redist=(-m RGB 60,80,50) #http://www.fmwconcepts.com/imagemagick/redist/index.php
 dcraw=(-q 3 -o 1 -6 -g 2.4 12.92 -w) # https://www.image-engineering.de/library/technotes/720-have-a-look-at-the-details-the-open-source-raw-converter-dcraw
 
+die() {
+    printf '\033[1;31mERROR: %s\033[0m\n' "$@" >&2  # bold red
+    exit 1
+}
+
+einfo() {
+    printf '\n\033[1;36m%s\033[0m\n' "$@" >&2  # bold cyan
+}
 
 # parse params
 while [[ "$#" -gt 0 ]]; do
@@ -13,10 +21,16 @@ while [[ "$#" -gt 0 ]]; do
         -t|--temp) tmpfolder="$2"; shift ;;
         -p|--photos) photofolder="$2"; shift ;;
         -j|--jpeg) jpegfolder="$2"; shift ;;
-        *) echo "Unknown parameter passed: $1"; exit 1 ;;
+        *) die "Unknown parameter passed: $1";;
     esac
     shift
 done
+
+# check dependencies
+command -v exiftool >/dev/null 2>&1 || die "exiftool not available"
+command -v dcraw_emu >/dev/null 2>&1 || die "dcraw not available"
+command -v convert >/dev/null 2>&1 || die "convert not available"
+command -v bc >/dev/null 2>&1 || die "bc not available"
 
 # verify params and set defaults
 if [ -z "$tmpfolder" ]; then tmpfolder="/tmp"; fi;
@@ -45,15 +59,11 @@ for rawfile in "${rawfiles[@]}"
     filename=${rawfilename%\.*}
 
     # Check if folder exists
-    if [ ! -d $rawfolder/$jpegfolder ] ; then
-	    mkdir $rawfolder/$jpegfolder; 
+    if [ ! -d $rawfolder/$jpegfolder ]
+    then
+	    mkdir $rawfolder/$jpegfolder || die "Could not create folder ${rawfolder}/${jpegfolder}"
 
-        if [ $? -eq 0 ] ; then
-            ((logdirs+=1))
-        else 
-            echo "Could not create folder ${rawfolder}/${jpegfolder}" >&2
-            exit 1
-        fi
+        ((logdirs+=1))
     fi
 
     # Get creation date
@@ -71,36 +81,30 @@ for rawfile in "${rawfiles[@]}"
 	then
 		((logskipped+=1))
 	else
-        tmpfile=`echo -n "${jpegfile}" | md5sum | head -c 20`
-        #tmpfile=$convertedfilename
-        
-        # Convert RAW to JPEG
-        #dcraw ${dcraw[@]} -c "${rawfile}" | convert - ${imagick[@]} "${tmpfolder}/${tmpfile}.jpg"
-        dcraw ${dcraw[@]} -c "${rawfile}" | convert - ${imagick[@]} MIFF:- | ./redist.sh ${redist[@]} MIFF:- "${tmpfolder}/${tmpfile}.jpg"
-        
-        if [ $? -gt 0 ] ; then
-            echo "Could not convert file ${rawfile}" >&2
-            ((logerrors+=1))
-        fi
+        (
+            set -e
+            tmpfile=`echo -n "${jpegfile}" | md5sum | head -c 20`
+            #tmpfile=$convertedfilename
+            
+            # Convert RAW to JPEG
+            #dcraw ${dcraw[@]} -c "${rawfile}" | convert - ${imagick[@]} "${tmpfolder}/${tmpfile}.jpg"
+            dcraw ${dcraw[@]} -c "${rawfile}" | convert - ${imagick[@]} MIFF:- | ./redist.sh ${redist[@]} MIFF:- "${tmpfolder}/${tmpfile}.jpg" \
+                || die "Could not convert file ${rawfile}"
 
-        # Copy Exif to JPG
-        exiftool -quiet -overwrite_original -TagsFromFile "${rawfile}" --Orientation "${tmpfolder}/${tmpfile}.jpg"
-        
-        if [ $? -gt 0 ] ; then
-            echo "Could not copy EXIF of ${rawfile}" >&2
-            ((logerrors+=1))
-        fi
+            # Copy Exif to JPG
+            exiftool -quiet -overwrite_original -TagsFromFile "${rawfile}" --Orientation "${tmpfolder}/${tmpfile}.jpg" \
+                || die "Could not copy EXIF of ${rawfile}"
 
-        #move file from temp
-        cp --no-preserve=mode,ownership "${tmpfolder}/${tmpfile}.jpg" "${jpegfile}" && rm "${tmpfolder}/${tmpfile}.jpg"
-
-        if [ $? -gt 0 ] ; then
-            echo "Could not move ${jpegfile}" >&2
+            #move file from temp
+            cp --no-preserve=mode,ownership "${tmpfolder}/${tmpfile}.jpg" "${jpegfile}" && rm "${tmpfolder}/${tmpfile}.jpg" \
+                || die "Could not create ${jpegfile}"
+        )
+        if [ $? -gt 0 ]
+        then
             ((logerrors+=1))
         else
             ((logcreated+=1))
         fi
-
     fi
 
     ((logfiles+=1))
@@ -114,10 +118,10 @@ runminutes=$(( (runtime % 3600) / 60 ));
 runseconds=$(( (runtime % 3600) % 60 )); 
 
 #print statistics
-echo "-- SETTINGS --"
+einfo "-- SETTINGS --"
 echo "Scanned folder: ${photofolder}"
 echo "Output folders: ${jpegfolder}"
-echo "-- RESULTS --"
+einfo "-- RESULTS --"
 echo "Processed RAW files: ${logfiles}"
 echo "Folders created: ${logdirs}"
 echo "Files created: ${logcreated}"
@@ -126,8 +130,7 @@ echo "Runtime: $runhours:$runminutes:$runseconds (hh:mm:ss)"
 
 #exit
 if [ $logerrors -gt 0 ] ; then
-    echo "Errors: ${logerrors}"
-    exit 1
+    die "Errors: ${logerrors}"
 else 
     exit 0
 fi
