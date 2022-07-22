@@ -7,9 +7,7 @@ nef2jpeg.sh [-p|--photos "path/to/scan"] [-t|--temp "path/for/temp/files"] [-j|-
 ```
 
 ## DESCRIPTION
-The script will search for NEF files in a folder (and it's subfolders) and convert the to JPEG files. Before conversion some automatic processing is performed to level enhancement and scale the image. The image is scaled to fit FullHD resolution (i.e. max 1920x1920). Level enhancement is performed using Fred Weinhaus' [redist](http://www.fmwconcepts.com/imagemagick/redist/index.php) with settings `-m HSL 60,90,30`.
-
-The script is designed to be used in a periodic cron job on a Synology NAS.
+The script will search for NEF files in a folder (and it's subfolders) and convert the to JPEG files. Before conversion some automatic processing is performed to level enhancement and scale the image. The image is scaled to fit FullHD resolution (i.e. max 1920x1920). Level enhancement is performed using Fred Weinhaus' [redist](http://www.fmwconcepts.com/imagemagick/redist/index.php) with settings `-m GLOBAL 60,90,30`. Whitebalance is corrected using Fred Weinhaus' [whitebalancing](http://www.fmwconcepts.com/imagemagick/whitebalancing/index.php) with default settings.
 
 ## OPTIONS
 `-p path` or `--photos path`
@@ -24,5 +22,8 @@ The script is designed to be used in a periodic cron job on a Synology NAS.
 ## DEPENDENCIES
 The script makes use of
 - [Exiftool](https://exiftool.org/)
-- [DCRaw](https://www.dechifro.org/dcraw/)
+- [LibRaw dcraw_emu](https://www.libraw.org/docs/Samples-LibRaw.html)
 - [ImageMagick](https://imagemagick.org/)
+- [bc](https://www.gnu.org/software/bc/)
+
+It is tested on Ubuntu 20.04

@@ -1,10 +1,9 @@
 #!/bin/bash
 #standard tool parameters
-#imagick=(-resize 1920x1920 -colorspace HSL -channel B -auto-level +channel -colorspace sRGB)
-#imagick=(-auto-level -auto-gamma -normalize -resize 1920x1920)
 imagick=(-resize 1920x1920)
-redist=(-m GLOBAL 60,80,40) #http://www.fmwconcepts.com/imagemagick/redist/index.php
-dcraw=(-q 3 -o 1 -6 -g 2.4 12.92 -w) # https://www.image-engineering.de/library/technotes/720-have-a-look-at-the-details-the-open-source-raw-converter-dcraw
+redist=(-m GLOBAL 60,90,30) #http://www.fmwconcepts.com/imagemagick/redist/index.php
+# dcraw=(-q 3 -o 1 -6 -g 2.4 12.92 -w) # https://www.image-engineering.de/library/technotes/720-have-a-look-at-the-details-the-open-source-raw-converter-dcraw
+dcraw=(-q 3 -o 1 -w)
 
 die() {
     printf '\033[1;31mERROR: %s\033[0m\n' "$@" >&2  # bold red
@@ -83,19 +82,15 @@ for rawfile in "${rawfiles[@]}"
 	else
         (
             set -e
-            # tmpfile=`echo -n "${jpegfile}" | md5sum | head -c 20`
-            #tmpfile=$convertedfilename
             tmpfile="${tmpfolder}/${rawfilename}"
             
             # Convert RAW to JPEG
-            #dcraw ${dcraw[@]} -c "${rawfile}" | convert - ${imagick[@]} "${tmpfolder}/${tmpfile}.jpg"
-            # dcraw ${dcraw[@]} -c "${rawfile}" | convert - ${imagick[@]} MIFF:- | ./redist.sh ${redist[@]} MIFF:- "${tmpfolder}/${tmpfile}.jpg" \
             cp "${rawfile}" "${tmpfile}"
 
             /usr/lib/libraw/dcraw_emu ${dcraw[@]} "${tmpfile}" \
                 || die "Could not convert file ${rawfilename} to PPM"
 
-            convert "${tmpfile}.ppm" ${imagick[@]} MIFF:- | ./redist.sh ${redist[@]} MIFF:- "${tmpfile}.jpg" \
+            convert "${tmpfile}.ppm" ${imagick[@]} MIFF:- | ./redist.sh ${redist[@]} MIFF:- MIFF:- | ./whitebalancing.sh MIFF:- "${tmpfile}.jpg" \
                 || die "Could not convert file ${rawfilename}.ppm to JPG"
 
             # Copy Exif to JPG
